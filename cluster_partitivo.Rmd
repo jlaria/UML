@@ -1,0 +1,198 @@
+---
+title: "Clusters partitivos: K-means"
+output:
+  html_document:
+    code_folding: show
+    toc: yes
+    toc_float: yes
+  pdf_document:
+    toc: yes
+  word_document:
+    toc: yes
+bibliography: refs.bib
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, cache = TRUE, fig.width = 5, fig.height = 5, fig.align = 'center')
+```
+
+## K-means
+
+En general, obtener un dendograma es bastante costoso computacionalmente, ya que debemos calcular todas las posibles particiones de nuestros datos en 2, 3, 4...  clusters. *K-means* es una alternativa a los *clusters jerárquicos* que es mucho más eficiente computacionalmente. Sin embargo, tiene dos desventajas principales con respecto a estos.
+
+1. Se considera únicamente la distancia euclídea.
+2. Hay que especificar desde el comienzo el número de clusters que queremos.
+
+Para hacer k-medias utilizamos la función `kmeans` del paquete base `stats`. En este caso, especificaremos 5 clusters.
+
+```{r, echo=F}
+data.protein = read.csv("http://kiwi.uc3m.es/datos-curso-deloitte/protein.csv")
+rownames(data.protein) = data.protein$Country
+data.protein$Country = NULL
+data.protein = as.data.frame(scale(data.protein))
+library(factoextra)
+```
+
+
+```{r}
+km = kmeans(data.protein, centers = 5)
+km$cluster 
+```
+
+Como vemos, la función `kmeans` devuelve una agrupación, de hecho, `km$cluster` tiene la misma estructura que la salida de la función `cutree`.
+
+Para visualizar los grupos resultantes, podemos utilizar la función `fviz_cluster` de la librería `factoextra`. Esta función visualizará los datos utilizando las dos primeras componentes principales.
+
+```{r}
+fviz_cluster(km, data=data.protein, labelsize = 8)
+```
+
+Más ejemplos: https://www.naftaliharris.com/blog/visualizing-k-means-clustering/
+
+## MiniBatch K-means
+
+*MiniBatch k-means* ha sido propuesto como una alternativa al algoritmo *k-means* para agrupar datos masivos. La ventaja de *MiniBatch k-means* es que reduce el coste computacional al no utilizar todos los datos en cada iteración, sino una muestra aleatoria de tamaño fijo.
+
+En esta sección ilustraremos el uso de *MiniBatch k-means* en segmentación de imágenes (*Color Quantization*). Utilizaremos las librerías de R `ClusterR` para el algoritmo, y `OpenImageR` para representar las imágenes.
+
+```{r}
+if(!require("ClusterR"))install.packages("ClusterR")
+library(ClusterR)
+library(OpenImageR)
+```
+
+En este ejemplo utilizaremos una imagen de arte rupestre. Primero descargamos y leemos la imagen.
+
+```{r}
+if(!file.exists("gfx/Cave1.png")){
+    download.file(
+      url ="http://kiwi.uc3m.es/datos-curso-deloitte/Cave1.png",
+      destfile="gfx/Cave1.png")
+}
+img = readImage("gfx/Cave1.png")
+dim(img)
+```
+
+Podemos observar que la imagen tiene una resolución de 514x381 píxeles, separados en tres canales de colores (RGB), por lo que en realidad tenemos `381*514=195834` datos y `3` variables. Para mostrar la imagen en pantalla utilizamos la función `imageShow`.
+
+```{r}
+imageShow(img)
+```
+
+A continuación, convertimos nuestra matriz `381x514x3` en otra matriz de dimensión `195834x3`.
+
+```{r}
+img.vector = apply(img, 3, as.vector)
+dim(img.vector)
+```
+
+Ya estamos en condiciones de hacer MiniBatch K-means a nuestra imagen.
+
+```{r}
+mbkm = MiniBatchKmeans(img.vector, clusters = 10)
+```
+
+A continuación, vamos a sustituir la información de cada píxel por el centro del clúster al que pertenece. De esta forma obtendremos una imagen que tiene solamente 10 colores.
+
+```{r}
+mb.pred = predict_MBatchKMeans(img.vector, mbkm$centroids)
+new.img = mbkm$centroids[mb.pred, ] 
+```
+
+Devolvemos la imagen a su estructura original para poderla representar.
+
+```{r}
+dim(new.img) = c(nrow(img), ncol(img), 3) 
+imageShow(new.img)
+```
+
+## Partition around medoids (pam)
+
+A veces no es apropiado que los centros de los clusters sean puntos que no se encuentran entre las observaciones, como sucede con *k-means*.
+Partition around medoids (*pam*, *k-medoids*) es una técnica partitiva similar a *k-means*, pero los centros de los clusters en lugar de ser promedios, son **medoids**, que pueden considerarse una generalización de la mediana para datos multivariados.
+
+Para este algoritmo, utilizaremos la función `pam` de la librería `cluster`.
+
+```{r}
+library(cluster)
+pm = pam(data.protein, k=5)
+knitr::kable(pm$medoids)
+```
+
+El valor que devuelve la función `pam` es similar al que devuelve `kmeans`, excepto que en lugar de tener la propiedad `centers`, ahora tenemos `medoids`.
+
+Podemos visualizar la agrupación resultante.
+
+```{r}
+fviz_cluster(pm, data=data.protein, labelsize = 8)
+```
+
+
+## Clustering large applications (clara)
+
+Como es lógico, *pam* es computacionalmente más costoso que *k-means*, pues calcular el *medoid* es mucho más difícil que hacer un promedio. Existe una alternativa eficiente a *k-medoids*, *clara* para agrupar grandes volúmenes de datos. Se basa en agrupar primero una muestra de los datos originales y luego asignar los datos restantes a estos grupos.
+
+Utilizaremos la función `Clara_Medoids` del paquete `ClusterR`, porque vamos a trabajar con la misma foto que usamos para ilustrar `MiniBatchKmeans`.
+
+```{r}
+clara.m = Clara_Medoids(img.vector, clusters = 10, samples = 10, sample_size = 0.001)
+```
+
+Hay que ser muy cuidadosos aquí con los parámetros, `sample` y `sample_size`, porque tenemos muchos datos, y esta función es muy costosa computacionalmente si aumentamos estos parámetros.
+
+A continuación asignamos cada pixel a su color correspondiente, y mostramos la nueva imagen.
+
+```{r}
+clara.pred = predict_Medoids(img.vector, clara.m$medoids)
+new.img = clara.m$medoids[clara.pred$clusters, ] 
+dim(new.img) = c(nrow(img), ncol(img), 3) 
+imageShow(new.img)
+```
+
+
+## Calculando el número óptimo de clusters
+
+A continuación, veremos tres técnicas para calcular el número óptimo de clusters. Primero, vamos a sacar una muestra de nuestros datos de menos tamaño, ya que los cálculos que haremos serán más costosos.
+
+```{r}
+set.seed(1)
+img.vector.small = img.vector[sample(nrow(img.vector),1000),]
+```
+
+### Método del codo
+
+La idea básica de los algoritmos partitivos es obtener cluster con la mínima WSS (within-cluster sum of squares), que mide cuán compactos son los clusters. Pudiéramos intentar quedarnos con el número de clusters `nclust` que minimiza este valor. Sin embargo, WSS siempre decrece a medida que consideramos un mayor número de grupos. 
+
+El método del codo mira el valor de WSS con respecto al número de grupos considerados, y busca el primer punto en que hay un cambio brusco en la curva, es decir, que adicionar un grupo nuevo no mejora demasiado con respecto a lo que ya había.
+
+```{r}
+library(factoextra)
+
+fviz_nbclust(img.vector.small, kmeans, method = "wss") +
+    geom_vline(xintercept = 3, linetype = 2)+
+  labs(subtitle = "Elbow method")
+
+```
+
+### Método average silhouette
+
+La idea básica de este método es medir la calidad de la agrupación en función de cuán bien encierra los datos en los diferentes grupos. ¿Debería cambiar mucho la silueta del cluster si quitamos alguna de sus observaciones?
+
+El método de la silueta promedio calcula la silueta de los grupos para distintos números de grupos `nclust`. El mejor número es aquel que maximiza la silueta.
+
+```{r}
+fviz_nbclust(img.vector.small, kmeans, method = "silhouette")+
+  labs(subtitle = "Silhouette method")
+```
+
+### Método Gap statistic
+
+Este se puede considerar el más formal de los tres métodos, y puede ser aplicado a cualquier método de clustering, incluyendo clúster jerárquico.
+
+```{r}
+set.seed(3)
+gap_stat = cluster::clusGap(img.vector.small, FUN = kmeans, K.max = 20)
+fviz_gap_stat(gap_stat, maxSE = list(method="globalmax"))+labs(subtitle = "Gap statistic method")
+
+```
+---------------------------------

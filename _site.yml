@@ -1,0 +1,19 @@
+name: "UML"
+output_dir: "."
+navbar:
+  title: "Unsupervised Machine Learning"
+  left:
+    - text: "Slides"
+      href: analytics.c2.pdf
+    - text: "Clusters jerárquicos"
+      href: cluster_jerarquico.html
+    - text: "Clusters partitivos"
+      href: cluster_partitivo.html
+    - text: "DBSCAN"
+      href: dbscan.html
+    - text: "LGA"
+      href: lga.html
+output:
+  html_document:
+        highlight: pygments
+        theme: cosmo

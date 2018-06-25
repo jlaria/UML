@@ -1,0 +1,590 @@
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+
+<head>
+
+<meta charset="utf-8" />
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<meta name="generator" content="pandoc" />
+
+
+
+
+<title>Clusters partitivos: K-means</title>
+
+<script src="site_libs/jquery-1.11.3/jquery.min.js"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link href="site_libs/bootstrap-3.3.5/css/cosmo.min.css" rel="stylesheet" />
+<script src="site_libs/bootstrap-3.3.5/js/bootstrap.min.js"></script>
+<script src="site_libs/bootstrap-3.3.5/shim/html5shiv.min.js"></script>
+<script src="site_libs/bootstrap-3.3.5/shim/respond.min.js"></script>
+<script src="site_libs/jqueryui-1.11.4/jquery-ui.min.js"></script>
+<link href="site_libs/tocify-1.9.1/jquery.tocify.css" rel="stylesheet" />
+<script src="site_libs/tocify-1.9.1/jquery.tocify.js"></script>
+<script src="site_libs/navigation-1.1/tabsets.js"></script>
+<script src="site_libs/navigation-1.1/codefolding.js"></script>
+
+
+<style type="text/css">code{white-space: pre;}</style>
+<style type="text/css">
+div.sourceCode { overflow-x: auto; }
+table.sourceCode, tr.sourceCode, td.lineNumbers, td.sourceCode {
+  margin: 0; padding: 0; vertical-align: baseline; border: none; }
+table.sourceCode { width: 100%; line-height: 100%; }
+td.lineNumbers { text-align: right; padding-right: 4px; padding-left: 4px; color: #aaaaaa; border-right: 1px solid #aaaaaa; }
+td.sourceCode { padding-left: 5px; }
+code > span.kw { color: #007020; font-weight: bold; } /* Keyword */
+code > span.dt { color: #902000; } /* DataType */
+code > span.dv { color: #40a070; } /* DecVal */
+code > span.bn { color: #40a070; } /* BaseN */
+code > span.fl { color: #40a070; } /* Float */
+code > span.ch { color: #4070a0; } /* Char */
+code > span.st { color: #4070a0; } /* String */
+code > span.co { color: #60a0b0; font-style: italic; } /* Comment */
+code > span.ot { color: #007020; } /* Other */
+code > span.al { color: #ff0000; font-weight: bold; } /* Alert */
+code > span.fu { color: #06287e; } /* Function */
+code > span.er { color: #ff0000; font-weight: bold; } /* Error */
+code > span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
+code > span.cn { color: #880000; } /* Constant */
+code > span.sc { color: #4070a0; } /* SpecialChar */
+code > span.vs { color: #4070a0; } /* VerbatimString */
+code > span.ss { color: #bb6688; } /* SpecialString */
+code > span.im { } /* Import */
+code > span.va { color: #19177c; } /* Variable */
+code > span.cf { color: #007020; font-weight: bold; } /* ControlFlow */
+code > span.op { color: #666666; } /* Operator */
+code > span.bu { } /* BuiltIn */
+code > span.ex { } /* Extension */
+code > span.pp { color: #bc7a00; } /* Preprocessor */
+code > span.at { color: #7d9029; } /* Attribute */
+code > span.do { color: #ba2121; font-style: italic; } /* Documentation */
+code > span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
+code > span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } /* CommentVar */
+code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
+div.sourceCode {
+  overflow-x: visible;
+}
+</style>
+<style type="text/css">
+  pre:not([class]) {
+    background-color: white;
+  }
+</style>
+
+
+<style type="text/css">
+h1 {
+  font-size: 34px;
+}
+h1.title {
+  font-size: 38px;
+}
+h2 {
+  font-size: 30px;
+}
+h3 {
+  font-size: 24px;
+}
+h4 {
+  font-size: 18px;
+}
+h5 {
+  font-size: 16px;
+}
+h6 {
+  font-size: 12px;
+}
+.table th:not([align]) {
+  text-align: left;
+}
+</style>
+
+
+</head>
+
+<body>
+
+<style type = "text/css">
+.main-container {
+  max-width: 940px;
+  margin-left: auto;
+  margin-right: auto;
+}
+code {
+  color: inherit;
+  background-color: rgba(0, 0, 0, 0.04);
+}
+img {
+  max-width:100%;
+  height: auto;
+}
+.tabbed-pane {
+  padding-top: 12px;
+}
+button.code-folding-btn:focus {
+  outline: none;
+}
+</style>
+
+
+<style type="text/css">
+/* padding for bootstrap navbar */
+body {
+  padding-top: 51px;
+  padding-bottom: 40px;
+}
+/* offset scroll position for anchor links (for fixed navbar)  */
+.section h1 {
+  padding-top: 56px;
+  margin-top: -56px;
+}
+
+.section h2 {
+  padding-top: 56px;
+  margin-top: -56px;
+}
+.section h3 {
+  padding-top: 56px;
+  margin-top: -56px;
+}
+.section h4 {
+  padding-top: 56px;
+  margin-top: -56px;
+}
+.section h5 {
+  padding-top: 56px;
+  margin-top: -56px;
+}
+.section h6 {
+  padding-top: 56px;
+  margin-top: -56px;
+}
+</style>
+
+<script>
+// manage active state of menu based on current page
+$(document).ready(function () {
+  // active menu anchor
+  href = window.location.pathname
+  href = href.substr(href.lastIndexOf('/') + 1)
+  if (href === "")
+    href = "index.html";
+  var menuAnchor = $('a[href="' + href + '"]');
+
+  // mark it active
+  menuAnchor.parent().addClass('active');
+
+  // if it's got a parent navbar menu mark it active as well
+  menuAnchor.closest('li.dropdown').addClass('active');
+});
+</script>
+
+
+<div class="container-fluid main-container">
+
+<!-- tabsets -->
+<script>
+$(document).ready(function () {
+  window.buildTabsets("TOC");
+});
+</script>
+
+<!-- code folding -->
+<style type="text/css">
+.code-folding-btn { margin-bottom: 4px; }
+</style>
+<script>
+$(document).ready(function () {
+  window.initializeCodeFolding("show" === "show");
+});
+</script>
+
+
+
+
+<script>
+$(document).ready(function ()  {
+
+    // move toc-ignore selectors from section div to header
+    $('div.section.toc-ignore')
+        .removeClass('toc-ignore')
+        .children('h1,h2,h3,h4,h5').addClass('toc-ignore');
+
+    // establish options
+    var options = {
+      selectors: "h1,h2,h3",
+      theme: "bootstrap3",
+      context: '.toc-content',
+      hashGenerator: function (text) {
+        return text.replace(/[.\\/?&!#<>]/g, '').replace(/\s/g, '_').toLowerCase();
+      },
+      ignoreSelector: ".toc-ignore",
+      scrollTo: 0
+    };
+    options.showAndHide = true;
+    options.smoothScroll = true;
+
+    // tocify
+    var toc = $("#TOC").tocify(options).data("toc-tocify");
+});
+</script>
+
+<style type="text/css">
+
+#TOC {
+  margin: 25px 0px 20px 0px;
+}
+@media (max-width: 768px) {
+#TOC {
+  position: relative;
+  width: 100%;
+}
+}
+
+
+.toc-content {
+  padding-left: 30px;
+  padding-right: 40px;
+}
+
+div.main-container {
+  max-width: 1200px;
+}
+
+div.tocify {
+  width: 20%;
+  max-width: 260px;
+  max-height: 85%;
+}
+
+@media (min-width: 768px) and (max-width: 991px) {
+  div.tocify {
+    width: 25%;
+  }
+}
+
+@media (max-width: 767px) {
+  div.tocify {
+    width: 100%;
+    max-width: none;
+  }
+}
+
+.tocify ul, .tocify li {
+  line-height: 20px;
+}
+
+.tocify-subheader .tocify-item {
+  font-size: 0.90em;
+  padding-left: 25px;
+  text-indent: 0;
+}
+
+.tocify .list-group-item {
+  border-radius: 0px;
+}
+
+
+</style>
+
+<!-- setup 3col/9col grid for toc_float and main content  -->
+<div class="row-fluid">
+<div class="col-xs-12 col-sm-4 col-md-3">
+<div id="TOC" class="tocify">
+</div>
+</div>
+
+<div class="toc-content col-xs-12 col-sm-8 col-md-9">
+
+
+
+
+<div class="navbar navbar-default  navbar-fixed-top" role="navigation">
+  <div class="container">
+    <div class="navbar-header">
+      <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar">
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+      </button>
+      <a class="navbar-brand" href="index.html">Unsupervised Machine Learning</a>
+    </div>
+    <div id="navbar" class="navbar-collapse collapse">
+      <ul class="nav navbar-nav">
+        <li>
+  <a href="analytics.c2.pdf">Slides</a>
+</li>
+<li>
+  <a href="cluster_jerarquico.html">Clusters jerárquicos</a>
+</li>
+<li>
+  <a href="cluster_partitivo.html">Clusters partitivos</a>
+</li>
+<li>
+  <a href="dbscan.html">DBSCAN</a>
+</li>
+<li>
+  <a href="lga.html">LGA</a>
+</li>
+      </ul>
+      <ul class="nav navbar-nav navbar-right">
+        
+      </ul>
+    </div><!--/.nav-collapse -->
+  </div><!--/.container -->
+</div><!--/.navbar -->
+
+<div class="fluid-row" id="header">
+
+<div class="btn-group pull-right">
+<button type="button" class="btn btn-default btn-xs dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"><span>Code</span> <span class="caret"></span></button>
+<ul class="dropdown-menu" style="min-width: 50px;">
+<li><a id="rmd-show-all-code" href="#">Show All Code</a></li>
+<li><a id="rmd-hide-all-code" href="#">Hide All Code</a></li>
+</ul>
+</div>
+
+
+
+<h1 class="title toc-ignore">Clusters partitivos: K-means</h1>
+
+</div>
+
+
+<div id="k-means" class="section level2">
+<h2>K-means</h2>
+<p>En general, obtener un dendograma es bastante costoso computacionalmente, ya que debemos calcular todas las posibles particiones de nuestros datos en 2, 3, 4… clusters. <em>K-means</em> es una alternativa a los <em>clusters jerárquicos</em> que es mucho más eficiente computacionalmente. Sin embargo, tiene dos desventajas principales con respecto a estos.</p>
+<ol style="list-style-type: decimal">
+<li>Se considera únicamente la distancia euclídea.</li>
+<li>Hay que especificar desde el comienzo el número de clusters que queremos.</li>
+</ol>
+<p>Para hacer k-medias utilizamos la función <code>kmeans</code> del paquete base <code>stats</code>. En este caso, especificaremos 5 clusters.</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">km =<span class="st"> </span><span class="kw">kmeans</span>(data.protein, <span class="dt">centers =</span> <span class="dv">5</span>)
+km<span class="op">$</span>cluster </code></pre></div>
+<pre><code>##        Albania        Austria        Belgium       Bulgaria Czechoslovakia 
+##              1              3              3              1              4 
+##        Denmark      E Germany        Finland         France         Greece 
+##              2              4              2              3              5 
+##        Hungary        Ireland          Italy    Netherlands         Norway 
+##              4              3              5              3              2 
+##         Poland       Portugal        Romania          Spain         Sweden 
+##              4              5              1              5              2 
+##    Switzerland             UK           USSR      W Germany     Yugoslavia 
+##              3              3              4              3              1</code></pre>
+<p>Como vemos, la función <code>kmeans</code> devuelve una agrupación, de hecho, <code>km$cluster</code> tiene la misma estructura que la salida de la función <code>cutree</code>.</p>
+<p>Para visualizar los grupos resultantes, podemos utilizar la función <code>fviz_cluster</code> de la librería <code>factoextra</code>. Esta función visualizará los datos utilizando las dos primeras componentes principales.</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">fviz_cluster</span>(km, <span class="dt">data=</span>data.protein, <span class="dt">labelsize =</span> <span class="dv">8</span>)</code></pre></div>
+<p><img src="cluster_partitivo_files/figure-html/unnamed-chunk-3-1.png" width="480" style="display: block; margin: auto;" /></p>
+<p>Más ejemplos: <a href="https://www.naftaliharris.com/blog/visualizing-k-means-clustering/" class="uri">https://www.naftaliharris.com/blog/visualizing-k-means-clustering/</a></p>
+</div>
+<div id="minibatch-k-means" class="section level2">
+<h2>MiniBatch K-means</h2>
+<p><em>MiniBatch k-means</em> ha sido propuesto como una alternativa al algoritmo <em>k-means</em> para agrupar datos masivos. La ventaja de <em>MiniBatch k-means</em> es que reduce el coste computacional al no utilizar todos los datos en cada iteración, sino una muestra aleatoria de tamaño fijo.</p>
+<p>En esta sección ilustraremos el uso de <em>MiniBatch k-means</em> en segmentación de imágenes (<em>Color Quantization</em>). Utilizaremos las librerías de R <code>ClusterR</code> para el algoritmo, y <code>OpenImageR</code> para representar las imágenes.</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="cf">if</span>(<span class="op">!</span><span class="kw">require</span>(<span class="st">&quot;ClusterR&quot;</span>))<span class="kw">install.packages</span>(<span class="st">&quot;ClusterR&quot;</span>)</code></pre></div>
+<pre><code>## Loading required package: ClusterR</code></pre>
+<pre><code>## Loading required package: gtools</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">library</span>(ClusterR)
+<span class="kw">library</span>(OpenImageR)</code></pre></div>
+<p>En este ejemplo utilizaremos una imagen de arte rupestre. Primero descargamos y leemos la imagen.</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="cf">if</span>(<span class="op">!</span><span class="kw">file.exists</span>(<span class="st">&quot;gfx/Cave1.png&quot;</span>)){
+    <span class="kw">download.file</span>(
+      <span class="dt">url =</span><span class="st">&quot;http://kiwi.uc3m.es/datos-curso-deloitte/Cave1.png&quot;</span>,
+      <span class="dt">destfile=</span><span class="st">&quot;gfx/Cave1.png&quot;</span>)
+}
+img =<span class="st"> </span><span class="kw">readImage</span>(<span class="st">&quot;gfx/Cave1.png&quot;</span>)
+<span class="kw">dim</span>(img)</code></pre></div>
+<pre><code>## [1] 381 514   3</code></pre>
+<p>Podemos observar que la imagen tiene una resolución de 514x381 píxeles, separados en tres canales de colores (RGB), por lo que en realidad tenemos <code>381*514=195834</code> datos y <code>3</code> variables. Para mostrar la imagen en pantalla utilizamos la función <code>imageShow</code>.</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">imageShow</span>(img)</code></pre></div>
+<p><img src="cluster_partitivo_files/figure-html/unnamed-chunk-6-1.png" width="480" style="display: block; margin: auto;" /></p>
+<p>A continuación, convertimos nuestra matriz <code>381x514x3</code> en otra matriz de dimensión <code>195834x3</code>.</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">img.vector =<span class="st"> </span><span class="kw">apply</span>(img, <span class="dv">3</span>, as.vector)
+<span class="kw">dim</span>(img.vector)</code></pre></div>
+<pre><code>## [1] 195834      3</code></pre>
+<p>Ya estamos en condiciones de hacer MiniBatch K-means a nuestra imagen.</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">mbkm =<span class="st"> </span><span class="kw">MiniBatchKmeans</span>(img.vector, <span class="dt">clusters =</span> <span class="dv">10</span>)</code></pre></div>
+<p>A continuación, vamos a sustituir la información de cada píxel por el centro del clúster al que pertenece. De esta forma obtendremos una imagen que tiene solamente 10 colores.</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">mb.pred =<span class="st"> </span><span class="kw">predict_MBatchKMeans</span>(img.vector, mbkm<span class="op">$</span>centroids)
+new.img =<span class="st"> </span>mbkm<span class="op">$</span>centroids[mb.pred, ] </code></pre></div>
+<p>Devolvemos la imagen a su estructura original para poderla representar.</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">dim</span>(new.img) =<span class="st"> </span><span class="kw">c</span>(<span class="kw">nrow</span>(img), <span class="kw">ncol</span>(img), <span class="dv">3</span>) 
+<span class="kw">imageShow</span>(new.img)</code></pre></div>
+<p><img src="cluster_partitivo_files/figure-html/unnamed-chunk-10-1.png" width="480" style="display: block; margin: auto;" /></p>
+</div>
+<div id="partition-around-medoids-pam" class="section level2">
+<h2>Partition around medoids (pam)</h2>
+<p>A veces no es apropiado que los centros de los clusters sean puntos que no se encuentran entre las observaciones, como sucede con <em>k-means</em>. Partition around medoids (<em>pam</em>, <em>k-medoids</em>) es una técnica partitiva similar a <em>k-means</em>, pero los centros de los clusters en lugar de ser promedios, son <strong>medoids</strong>, que pueden considerarse una generalización de la mediana para datos multivariados.</p>
+<p>Para este algoritmo, utilizaremos la función <code>pam</code> de la librería <code>cluster</code>.</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">library</span>(cluster)
+pm =<span class="st"> </span><span class="kw">pam</span>(data.protein, <span class="dt">k=</span><span class="dv">5</span>)
+knitr<span class="op">::</span><span class="kw">kable</span>(pm<span class="op">$</span>medoids)</code></pre></div>
+<table>
+<thead>
+<tr class="header">
+<th></th>
+<th align="right">RedMeat</th>
+<th align="right">WhiteMeat</th>
+<th align="right">Eggs</th>
+<th align="right">Milk</th>
+<th align="right">Fish</th>
+<th align="right">Cereals</th>
+<th align="right">Starch</th>
+<th align="right">Nuts</th>
+<th align="right">Fr.Veg</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Romania</td>
+<td align="right">-1.0839304</td>
+<td align="right">-0.4320425</td>
+<td align="right">-1.2848772</td>
+<td align="right">-0.8461152</td>
+<td align="right">-0.9651632</td>
+<td align="right">1.5810786</td>
+<td align="right">-0.7196689</td>
+<td align="right">1.1220326</td>
+<td align="right">-0.7406162</td>
+</tr>
+<tr class="even">
+<td>Netherlands</td>
+<td align="right">-0.0979959</td>
+<td align="right">1.5440918</td>
+<td align="right">0.5941215</td>
+<td align="right">0.8849588</td>
+<td align="right">-0.5243152</td>
+<td align="right">-0.8973295</td>
+<td align="right">-0.0465092</td>
+<td align="right">-0.6405859</td>
+<td align="right">-0.2416981</td>
+</tr>
+<tr class="odd">
+<td>Belgium</td>
+<td align="right">1.0970762</td>
+<td align="right">0.3800675</td>
+<td align="right">1.0415022</td>
+<td align="right">0.0546062</td>
+<td align="right">0.0634821</td>
+<td align="right">-0.5146342</td>
+<td align="right">0.8714358</td>
+<td align="right">-0.4895043</td>
+<td align="right">-0.0753921</td>
+</tr>
+<tr class="even">
+<td>Sweden</td>
+<td align="right">0.0215113</td>
+<td align="right">-0.0259875</td>
+<td align="right">0.5046454</td>
+<td align="right">1.0679178</td>
+<td align="right">0.9451781</td>
+<td align="right">-1.1615716</td>
+<td align="right">-0.3524909</td>
+<td align="right">-0.8420280</td>
+<td align="right">-1.1840990</td>
+</tr>
+<tr class="odd">
+<td>Spain</td>
+<td align="right">-0.8150392</td>
+<td align="right">-1.2170822</td>
+<td align="right">0.1467409</td>
+<td align="right">-1.1979595</td>
+<td align="right">0.7982288</td>
+<td align="right">-0.2777275</td>
+<td align="right">0.8714358</td>
+<td align="right">1.4241958</td>
+<td align="right">1.6985391</td>
+</tr>
+</tbody>
+</table>
+<p>El valor que devuelve la función <code>pam</code> es similar al que devuelve <code>kmeans</code>, excepto que en lugar de tener la propiedad <code>centers</code>, ahora tenemos <code>medoids</code>.</p>
+<p>Podemos visualizar la agrupación resultante.</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">fviz_cluster</span>(pm, <span class="dt">data=</span>data.protein, <span class="dt">labelsize =</span> <span class="dv">8</span>)</code></pre></div>
+<p><img src="cluster_partitivo_files/figure-html/unnamed-chunk-12-1.png" width="480" style="display: block; margin: auto;" /></p>
+</div>
+<div id="clustering-large-applications-clara" class="section level2">
+<h2>Clustering large applications (clara)</h2>
+<p>Como es lógico, <em>pam</em> es computacionalmente más costoso que <em>k-means</em>, pues calcular el <em>medoid</em> es mucho más difícil que hacer un promedio. Existe una alternativa eficiente a <em>k-medoids</em>, <em>clara</em> para agrupar grandes volúmenes de datos. Se basa en agrupar primero una muestra de los datos originales y luego asignar los datos restantes a estos grupos.</p>
+<p>Utilizaremos la función <code>Clara_Medoids</code> del paquete <code>ClusterR</code>, porque vamos a trabajar con la misma foto que usamos para ilustrar <code>MiniBatchKmeans</code>.</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">clara.m =<span class="st"> </span><span class="kw">Clara_Medoids</span>(img.vector, <span class="dt">clusters =</span> <span class="dv">10</span>, <span class="dt">samples =</span> <span class="dv">10</span>, <span class="dt">sample_size =</span> <span class="fl">0.001</span>)</code></pre></div>
+<p>Hay que ser muy cuidadosos aquí con los parámetros, <code>sample</code> y <code>sample_size</code>, porque tenemos muchos datos, y esta función es muy costosa computacionalmente si aumentamos estos parámetros.</p>
+<p>A continuación asignamos cada pixel a su color correspondiente, y mostramos la nueva imagen.</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">clara.pred =<span class="st"> </span><span class="kw">predict_Medoids</span>(img.vector, clara.m<span class="op">$</span>medoids)
+new.img =<span class="st"> </span>clara.m<span class="op">$</span>medoids[clara.pred<span class="op">$</span>clusters, ] 
+<span class="kw">dim</span>(new.img) =<span class="st"> </span><span class="kw">c</span>(<span class="kw">nrow</span>(img), <span class="kw">ncol</span>(img), <span class="dv">3</span>) 
+<span class="kw">imageShow</span>(new.img)</code></pre></div>
+<p><img src="cluster_partitivo_files/figure-html/unnamed-chunk-14-1.png" width="480" style="display: block; margin: auto;" /></p>
+</div>
+<div id="calculando-el-numero-optimo-de-clusters" class="section level2">
+<h2>Calculando el número óptimo de clusters</h2>
+<p>A continuación, veremos tres técnicas para calcular el número óptimo de clusters. Primero, vamos a sacar una muestra de nuestros datos de menos tamaño, ya que los cálculos que haremos serán más costosos.</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">set.seed</span>(<span class="dv">1</span>)
+img.vector.small =<span class="st"> </span>img.vector[<span class="kw">sample</span>(<span class="kw">nrow</span>(img.vector),<span class="dv">1000</span>),]</code></pre></div>
+<div id="metodo-del-codo" class="section level3">
+<h3>Método del codo</h3>
+<p>La idea básica de los algoritmos partitivos es obtener cluster con la mínima WSS (within-cluster sum of squares), que mide cuán compactos son los clusters. Pudiéramos intentar quedarnos con el número de clusters <code>nclust</code> que minimiza este valor. Sin embargo, WSS siempre decrece a medida que consideramos un mayor número de grupos.</p>
+<p>El método del codo mira el valor de WSS con respecto al número de grupos considerados, y busca el primer punto en que hay un cambio brusco en la curva, es decir, que adicionar un grupo nuevo no mejora demasiado con respecto a lo que ya había.</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">library</span>(factoextra)
+
+<span class="kw">fviz_nbclust</span>(img.vector.small, kmeans, <span class="dt">method =</span> <span class="st">&quot;wss&quot;</span>) <span class="op">+</span>
+<span class="st">    </span><span class="kw">geom_vline</span>(<span class="dt">xintercept =</span> <span class="dv">3</span>, <span class="dt">linetype =</span> <span class="dv">2</span>)<span class="op">+</span>
+<span class="st">  </span><span class="kw">labs</span>(<span class="dt">subtitle =</span> <span class="st">&quot;Elbow method&quot;</span>)</code></pre></div>
+<p><img src="cluster_partitivo_files/figure-html/unnamed-chunk-16-1.png" width="480" style="display: block; margin: auto;" /></p>
+</div>
+<div id="metodo-average-silhouette" class="section level3">
+<h3>Método average silhouette</h3>
+<p>La idea básica de este método es medir la calidad de la agrupación en función de cuán bien encierra los datos en los diferentes grupos. ¿Debería cambiar mucho la silueta del cluster si quitamos alguna de sus observaciones?</p>
+<p>El método de la silueta promedio calcula la silueta de los grupos para distintos números de grupos <code>nclust</code>. El mejor número es aquel que maximiza la silueta.</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">fviz_nbclust</span>(img.vector.small, kmeans, <span class="dt">method =</span> <span class="st">&quot;silhouette&quot;</span>)<span class="op">+</span>
+<span class="st">  </span><span class="kw">labs</span>(<span class="dt">subtitle =</span> <span class="st">&quot;Silhouette method&quot;</span>)</code></pre></div>
+<p><img src="cluster_partitivo_files/figure-html/unnamed-chunk-17-1.png" width="480" style="display: block; margin: auto;" /></p>
+</div>
+<div id="metodo-gap-statistic" class="section level3">
+<h3>Método Gap statistic</h3>
+<p>Este se puede considerar el más formal de los tres métodos, y puede ser aplicado a cualquier método de clustering, incluyendo clúster jerárquico.</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">set.seed</span>(<span class="dv">3</span>)
+gap_stat =<span class="st"> </span>cluster<span class="op">::</span><span class="kw">clusGap</span>(img.vector.small, <span class="dt">FUN =</span> kmeans, <span class="dt">K.max =</span> <span class="dv">20</span>)</code></pre></div>
+<pre><code>## Warning: did not converge in 10 iterations
+
+## Warning: did not converge in 10 iterations</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">fviz_gap_stat</span>(gap_stat, <span class="dt">maxSE =</span> <span class="kw">list</span>(<span class="dt">method=</span><span class="st">&quot;globalmax&quot;</span>))<span class="op">+</span><span class="kw">labs</span>(<span class="dt">subtitle =</span> <span class="st">&quot;Gap statistic method&quot;</span>)</code></pre></div>
+</div>
+</div>
+<div id="section" class="section level2">
+<h2><img src="cluster_partitivo_files/figure-html/unnamed-chunk-18-1.png" width="480" style="display: block; margin: auto;" /></h2>
+</div>
+
+
+
+</div>
+</div>
+
+</div>
+
+<script>
+
+// add bootstrap table styles to pandoc tables
+function bootstrapStylePandocTables() {
+  $('tr.header').parent('thead').parent('table').addClass('table table-condensed');
+}
+$(document).ready(function () {
+  bootstrapStylePandocTables();
+});
+
+
+</script>
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src  = "https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+
+</body>
+</html>

@@ -1,0 +1,28 @@
+---
+title: "Técnicas no supervisadas"
+output:
+  html_document:
+    toc: no
+    toc_float: no
+  pdf_document:
+    toc: yes
+  word_document:
+    toc: yes
+bibliography: refs.bib
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, cache = TRUE, fig.width = 5, fig.align = 'center')
+```
+
+## Contenidos
+
+[Introducción](./analytics.c2.pdf)
+
+[Clusters jerárquicos](./cluster_jerarquico.html)
+
+[Clusters partitivos](./cluster_partitivo.html)
+
+[DBSCAN](./dbscan.html)
+
+[LGA](./lga.html)

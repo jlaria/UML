@@ -1,0 +1,100 @@
+---
+title: "Linear Grouping Algorithm"
+output:
+  html_document:
+    code_folding: show
+    toc: yes
+    toc_float: yes
+  pdf_document:
+    toc: yes
+  word_document:
+    toc: yes
+bibliography: refs.bib
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, cache = TRUE, fig.width = 5, fig.height = 4, fig.align = 'center')
+```
+
+### LGA
+
+En los métodos de agrupación jerárquicos y partitivos que hemos visto, los centros de los clusters son puntos. Uno puede pensar en puntos como hiperplanos de dimensión cero. @van2006linear propusieron un algoritmo (LGA) para encontrar clusters alrededor de hiperplanos de baja dimensión (puntos, rectas, planos, etc). Posteriormente, @garcia2009robust desarrollaron una versión robusta.
+
+### Aplicación real
+
+En biología, la alometría se refiere a los cambios de dimensión relativa de las partes corporales correlacionados con los cambios en el tamaño total. Es de interés para los biólogos estudiar la relación entre el tamaño de los órganos para distintas especies. Generalmente, cuando el tamaño de un órgano es grande, los otros órganos del cuerpo también lo son. Por ejemplo, un cuerpo grande, requiere un cerebro grande, y estas relaciones son impulsadas por el proceso evolutivo.
+
+En estos datos, estudiados por @van2006linear, se tiene información sobre el peso del cerebro y el volumen del bulbo olfatorio en  83 especies de mamíferos, agrupadas según familias.
+
+```{r, echo=FALSE, message=F}
+library(lga)
+library(factoextra)
+data(ob)
+
+
+
+points = ob
+points$Group = NULL
+points$BrainWeight.g. = log(points$BrainWeight.g.)
+points$OlfactoryBulbs.ml. = log(points$OlfactoryBulbs.ml.)
+
+#levels(ob$Group)
+levels(ob$Group)[1] = "apes"
+levels(ob$Group)[2] = "carnivores"
+levels(ob$Group)[3] = "human"
+levels(ob$Group)[4] = "horse"
+levels(ob$Group)[5] = "insectivores"
+levels(ob$Group)[6] = "monkeys"
+levels(ob$Group)[7] = "prosimians"
+
+cl = list(cluster = ob$Group, data = points)
+
+
+
+fviz_cluster(cl, geom = "point", 
+             ellipse = F, show.clust.cent = F, 
+             palette="jco", ggtheme = theme_classic() )
+
+```
+
+Típicamente, existe una relación lineal entre los tamaños de los órganos en los animales. Sin embargo, estas relaciones no son las mismas entre diferentes familias debido a los hábitos de vida, el ambiente, las fuentes de alimento, etc. Por tanto, es necesario agrupar nuestros datos de acuerdo distintos patrones lineales.
+
+### Librería `lga`
+
+```{r, message=FALSE}
+# We install the required package
+if(!require("lga"))install.packages("lga")
+library(lga)
+
+# Load and transform the data
+data(ob)
+ob$BrainWeight.g. = log(ob$BrainWeight.g.)
+ob$OlfactoryBulbs.ml. = log(ob$OlfactoryBulbs.ml.)
+X = scale(ob[,-1])
+
+# Run the clustering algorithm
+cl.lga = lga(X, k=2)
+
+# Print the result
+library(ggplot2)
+datos =cbind(ob, cluster = factor(cl.lga$cluster))
+ggplot(data = datos, aes(x = BrainWeight.g., y=OlfactoryBulbs.ml., 
+                         colour = cluster, label = Group)) +
+  geom_text() + theme_classic() +
+  ggtitle("LGA cluster plot with 2 groups")
+
+```
+
+```{r}
+# Run the clustering algorithm w/ 3 groups
+cl.lga = lga(X, k=3)
+
+# Print the result
+datos =cbind(ob, cluster = factor(cl.lga$cluster))
+ggplot(data = datos, aes(x = BrainWeight.g., y=OlfactoryBulbs.ml., 
+                         colour = cluster, label = Group)) +
+  geom_text() + theme_classic() +
+  ggtitle("LGA cluster plot with 3 groups")
+```
+
+-----------------------------
