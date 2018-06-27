@@ -195,4 +195,5 @@ gap_stat = cluster::clusGap(img.vector.small, FUN = kmeans, K.max = 20)
 fviz_gap_stat(gap_stat, maxSE = list(method="globalmax"))+labs(subtitle = "Gap statistic method")
 
 ```
+
 ---------------------------------

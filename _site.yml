@@ -13,6 +13,8 @@ navbar:
       href: dbscan.html
     - text: "LGA"
       href: lga.html
+    - text: "PCA"
+      href: pca.html
 output:
   html_document:
         highlight: pygments
